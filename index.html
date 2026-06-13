@@ -27,7 +27,7 @@
 
             // GitHub Pages に置いた M3U8 ファイルをフェッチ
             // ※隊員、ここを実際の m3u8 ファイルのパスに書き換えてくれ！
-            const m3u8Url = 'https://kakaomames.github.io/rei/stream.m3u8';
+            const m3u8Url = 'https://kakaomames.github.io/ffmpeg-ytdl-test/stream.m3u8';
             ffmpeg.FS('writeFile', 'input.m3u8', await fetchFile(m3u8Url));
 
             // MP4 に変換（ストリームコピーではなく再エンコードで確実にMP4化）
