@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FFmpeg.wasm Revolution</title>
+    <script src="https://unpkg.com/coi-serviceworker@0.1.7/coi-serviceworker.js"></script>
+</head>
+<body>
+    <h1>FFmpeg.wasm 変換指令所</h1>
+    <button id="convertBtn">変換開始（M3U8 -> MP4）</button>
+    <div id="status">準備完了</div>
+    <a id="downloadLink" style="display:none;">変換済み動画をダウンロード</a>
+
+    <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
+    <script>
+        const { createFFmpeg, fetchFile } = FFmpeg;
+        const ffmpeg = createFFmpeg({ log: true });
+
+        document.getElementById('convertBtn').addEventListener('click', async () => {
+            const status = document.getElementById('status');
+            const downloadLink = document.getElementById('downloadLink');
+
+            status.innerText = "変換中...FFmpegが侵食を開始した！";
+
+            await ffmpeg.load();
+
+            // GitHub Pages に置いた M3U8 ファイルをフェッチ
+            // ※隊員、ここを実際の m3u8 ファイルのパスに書き換えてくれ！
+            const m3u8Url = 'https://kakaomames.github.io/rei/stream.m3u8';
+            ffmpeg.FS('writeFile', 'input.m3u8', await fetchFile(m3u8Url));
+
+            // MP4 に変換（ストリームコピーではなく再エンコードで確実にMP4化）
+            await ffmpeg.run('-i', 'input.m3u8', '-c', 'copy', 'output.mp4');
+
+            // Blob生成
+            const data = ffmpeg.FS('readFile', 'output.mp4');
+            const blob = new Blob([data.buffer], { type: 'video/mp4' });
+            
+            // ダウンロード準備
+            downloadLink.href = URL.createObjectURL(blob);
+            downloadLink.download = 'revolution.mp4';
+            downloadLink.style.display = 'block';
+            downloadLink.innerText = "変換完了！ここを押してダウンロードだ！";
+            
+            status.innerText = "完了！革命の動画が手元に届いたぞ！";
+        });
+    </script>
+</body>
+</html>
+
