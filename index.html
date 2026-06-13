@@ -5,88 +5,63 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>FFmpeg.wasm Revolution Command Center</title>
     <script>
-    // これを script タグの一番最初に置く！
-    const coi = {
-        shouldRegister: () => true,
-        shouldDeregister: () => false,
-        coepCredentialless: () => false,
-        doReload: () => window.location.reload(),
-    };
-</script>
-<script src="https://unpkg.com/coi-serviceworker@0.1.7/coi-serviceworker.js"></script>
+        // 設定を先に読み込む！
+        const coi = {
+            shouldRegister: () => true,
+            shouldDeregister: () => false,
+            coepCredentialless: () => true, // これを有効にする
+            doReload: () => window.location.reload(),
+        };
+    </script>
     <script src="https://unpkg.com/coi-serviceworker@0.1.7/coi-serviceworker.js"></script>
-    <style>
-        body { font-family: monospace; background: #1a1a1a; color: #00ff00; padding: 20px; }
-        #logo { width: 100px; display: block; margin: 0 auto; }
-        #logBox { 
-            background: #000; border: 1px solid #333; padding: 10px; 
-            height: 300px; overflow-y: scroll; margin-top: 20px; font-size: 12px;
-        }
-        .log-entry { margin-bottom: 5px; border-bottom: 1px solid #222; }
-    </style>
 </head>
 <body>
-    <img id="logo" src="https://kakaomames.github.io/rei/logo.png" alt="Logo">
-    <h1 style="text-align: center;">FFmpeg.wasm 変換指令所</h1>
-    
-    <div style="text-align: center;">
-        <button id="convertBtn">変換開始（M3U8 -> MP4）</button>
-    </div>
-
-    <div id="logBox">
-        <div class="log-entry">[SYSTEM] 待機中...</div>
-    </div>
-
-    <a id="downloadLink" style="display:none; color: #fff; font-weight: bold;">変換済み動画をダウンロード</a>
+    <img id="logo" src="https://kakaomames.github.io/rei/logo.png" alt="Logo" style="width:100px;">
+    <h1>FFmpeg.wasm 変換指令所</h1>
+    <button id="convertBtn">変換開始（M3U8 -> MP4）</button>
+    <div id="logBox" style="background:#000; color:#0f0; height:400px; overflow-y:scroll; font-family:monospace;"></div>
 
     <script src="https://unpkg.com/@ffmpeg/ffmpeg@0.11.6/dist/ffmpeg.min.js"></script>
     <script>
         const { createFFmpeg, fetchFile } = FFmpeg;
         
-        // ログの詳細出力を全部コンソールじゃなくて画面に出す設定
+        // ログの取りこぼしを防ぐためにコンソールと画面に同時出力する
+        const log = (msg) => {
+            const logBox = document.getElementById('logBox');
+            logBox.innerHTML += `<div>> ${msg}</div>`;
+            logBox.scrollTop = logBox.scrollHeight;
+            console.log(msg);
+        };
+
         const ffmpeg = createFFmpeg({ 
             log: true,
-            logger: ({ message }) => {
-                const logBox = document.getElementById('logBox');
-                const entry = document.createElement('div');
-                entry.className = 'log-entry';
-                entry.innerText = `> ${message}`;
-                logBox.appendChild(entry);
-                logBox.scrollTop = logBox.scrollHeight;
-            }
+            logger: ({ message }) => log(message)
         });
 
         document.getElementById('convertBtn').addEventListener('click', async () => {
-            const logBox = document.getElementById('logBox');
-            const downloadLink = document.getElementById('downloadLink');
-
-            logBox.innerHTML = '<div class="log-entry">[START] 侵食開始...</div>';
-
             try {
+                log("侵食開始...FFmpegをロード中");
                 await ffmpeg.load();
-                logBox.innerHTML += '<div class="log-entry">[OK] WebAssemblyロード完了</div>';
+                log("ロード成功！ファイルをフェッチ...");
 
                 const m3u8Url = 'https://kakaomames.github.io/ffmpeg-ytdl-test/stream.m3u8';
-                logBox.innerHTML += `<div class="log-entry">[FETCH] ${m3u8Url} を取得中...</div>`;
-                
                 ffmpeg.FS('writeFile', 'input.m3u8', await fetchFile(m3u8Url));
-                logBox.innerHTML += '<div class="log-entry">[FS] ファイルシステムに書き込み完了</div>';
-
-                // 変換実行
-                logBox.innerHTML += '<div class="log-entry">[FFmpeg] 変換実行中...</div>';
+                
+                log("変換実行...");
                 await ffmpeg.run('-i', 'input.m3u8', '-c', 'copy', 'output.mp4');
 
                 const data = ffmpeg.FS('readFile', 'output.mp4');
                 const blob = new Blob([data.buffer], { type: 'video/mp4' });
                 
-                downloadLink.href = URL.createObjectURL(blob);
-                downloadLink.download = 'revolution.mp4';
-                downloadLink.style.display = 'block';
-                downloadLink.innerText = "変換完了！革命の成果をダウンロード";
-                
-                logBox.innerHTML += '<div class="log-entry" style="color:yellow;">[SUCCESS] 革命完了！</div>';
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'revolution.mp4';
+                link.innerText = "ダウンロード";
+                document.body.appendChild(link);
+                log("革命成功！");
             } catch (e) {
-                logBox.innerHTML += `<div class="log-entry" style="color:red;">[ERROR] ${e.message}</div>`;
+                log("【致命的エラー】: " + e.message);
+                log("※ヒント：SharedArrayBuffer関連ならブラウザを完全リロードしろ！");
             }
         });
     </script>
